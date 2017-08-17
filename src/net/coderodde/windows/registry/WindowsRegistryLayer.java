@@ -8,6 +8,12 @@ package net.coderodde.windows.registry;
  */
 public class WindowsRegistryLayer {
 
+    public static final int HKEY_CURRENT_USER = 0x80000001;
+    
+    public static final int REG_OPTION_BACKUP_RESTORE   = 0x00000004;
+    public static final int REG_OPTION_CREATE_LINK      = 0x00000002;
+    public static final int REG_OPTION_VOLATILE         = 0x00000001;
+    
     static {
         try {
             System.loadLibrary("JavaWindowsRegistry");
@@ -56,11 +62,25 @@ public class WindowsRegistryLayer {
     public static void main(String[] args) {
         LPDWORD pdwQuotaAllowed = new LPDWORD();
         LPDWORD pdwQuotaUsed = new LPDWORD();
-        boolean success = new WindowsRegistryLayer()
+        WindowsRegistryLayer wrl = new WindowsRegistryLayer();
+        boolean success = wrl
                 .GetSystemRegistryQuota(pdwQuotaAllowed, pdwQuotaUsed);
      
         System.out.println(Integer.toUnsignedLong(pdwQuotaAllowed.value) + " " + pdwQuotaUsed.value + " " + success);
-        // TODO code application logic here
+        // TODO code application logic 
+        
+        PHKEY phKey = new PHKEY();
+        LPDWORD lpDword = new LPDWORD();
+        wrl.RegCreateKeyEx(
+                HKEY_CURRENT_USER, 
+                "Console\rodde", 
+                0, 
+                "class", 
+                REG_OPTION_VOLATILE,
+                0,
+                null,
+                phKey,
+                lpDword);
     }
     
 }
