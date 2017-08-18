@@ -71,9 +71,9 @@ public class WindowsRegistryLayer {
         
         PHKEY phKey = new PHKEY();
         LPDWORD lpDword = new LPDWORD();
-        wrl.RegCreateKeyEx(
+        int ret = wrl.RegCreateKeyEx(
                 HKEY_CURRENT_USER, 
-                "Console\rodde", 
+                "Console\\rodde", 
                 0, 
                 "class", 
                 REG_OPTION_VOLATILE,
@@ -81,6 +81,8 @@ public class WindowsRegistryLayer {
                 null,
                 phKey,
                 lpDword);
+        wrl.RegCloseKey(phKey.value);
+        System.out.println(ret);
     }
     
 }

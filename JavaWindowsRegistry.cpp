@@ -35,7 +35,7 @@ extern "C" {
 	}
 
 	JNIEXPORT jint JNICALL
-		Java_net_coderodde_windows_registry_WindowRegistryLayer_RegCloseKey
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegCloseKey
 		(JNIEnv* env, jobject obj, jint hKey)
 	{
 		return RegCloseKey((HKEY) hKey);
