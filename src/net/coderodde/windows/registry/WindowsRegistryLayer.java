@@ -63,6 +63,29 @@ public class WindowsRegistryLayer {
     public native int RegDeleteKey(int hKey, String lpSubKey);
     
     /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724847(v=vs.85).aspx">
+     * RegDeleteKeyEx function</a>
+     */
+    public native int RegDeleteKeyEx(int hKey, 
+                                     String lpSubKey, 
+                                     int samDesired, 
+                                     int Reserved);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724848(v=vs.85).aspx">
+     * RegDeleteKeyValue function</a>
+     */
+    public native int RegDeleteKeyValue(int hKey,
+                                        String lpSubKey,
+                                        String lpValueName);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/aa379776(v=vs.85).aspx">
+     * RegDeleteTree function</a> 
+     */
+    public native int RegDeleteTree(int hKey, String lpSubKey);
+    
+    /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
@@ -78,18 +101,18 @@ public class WindowsRegistryLayer {
         PHKEY phKey = new PHKEY();
         LPDWORD lpDword = new LPDWORD();
         int ret2 = wrl.RegDeleteKey(phKey.value, "Console\\rodde");
-        int ret = wrl.RegCreateKeyEx(
-                HKEY_CURRENT_USER, 
-                null, //"Console\\rodde", 
-                0, 
-                "class", 
-                REG_OPTION_VOLATILE,
-                0,
-                null,
-                phKey,
-                lpDword);
+//        int ret = wrl.RegCreateKeyEx(
+//                HKEY_CURRENT_USER, 
+//                "Console\\rodde", 
+//                0, 
+//                "class", 
+//                REG_OPTION_VOLATILE,
+//                0,
+//                null,
+//                phKey,
+//                lpDword);
         wrl.RegCloseKey(phKey.value);
-        System.out.println(ret);
+        System.out.println(ret2);
     }
     
 }

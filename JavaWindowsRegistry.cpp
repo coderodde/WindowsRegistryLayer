@@ -15,7 +15,8 @@ extern "C" {
 	JNIEXPORT jboolean JNICALL 
 		Java_net_coderodde_windows_registry_WindowsRegistryLayer_GetSystemRegistryQuota
 		(JNIEnv* env, 
-		 jobject obj, 
+		 jobject obj, // Instance method, so we have to ask for the this object.
+					  // Same for all other functions in this file.
 	     jobject jpdwQuotaAllowed, 
 		 jobject jpwdQuotaUsed)
 	{
@@ -45,6 +46,12 @@ extern "C" {
 		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegCopyTree
 		(JNIEnv* env, jobject obj, jint hKeySrc, jstring lpSubKey, jint hKeyDest)
 	{
+		if (lpSubKey == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpSubKey is null.");
+		}
+
 		const char* nativeLpSubKey = env->GetStringUTFChars(lpSubKey, 0);
 		int ret = RegCopyTreeA((HKEY) hKeySrc, nativeLpSubKey, (HKEY) hKeyDest);
 		env->ReleaseStringUTFChars(lpSubKey, nativeLpSubKey);
@@ -54,7 +61,7 @@ extern "C" {
 	JNIEXPORT jint JNICALL
 		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegCreateKeyEx
 		(JNIEnv* env, 
-		 jobject obj, // Instance method; needs the reference.
+		 jobject obj,
 		 jint hKey,
 		 jstring lpSubKey,
 		 jint reserved,
@@ -66,7 +73,6 @@ extern "C" {
 		 jobject lpdwDisposition)
 	{
 		if (lpSubKey == NULL) {
-			int i = 4;
 			const char* exClassName = "java/lang/NullPointerException";
 			jclass exClass = env->FindClass(exClassName);
 			return env->ThrowNew(exClass, "lpSubKey is null.");
@@ -114,12 +120,91 @@ extern "C" {
 	JNIEXPORT jint JNICALL
 		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegDeleteKey
 		   (JNIEnv* env,
-			jobject obj, // Instance method; needs the reference.
+			jobject obj,
 			jint hKey,
 			jstring lpSubKey)
 	{
+		if (lpSubKey == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpSubKey is null.");
+		}
+
 		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
 		jint ret = (jint) RegDeleteKey((HKEY)hKey, (LPCWSTR) nativeLpSubKey);  
+		env->ReleaseStringChars(lpSubKey, nativeLpSubKey);
+		return ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegDeleteKeyEx(
+			JNIEnv* env,
+			jobject obj,
+			jint hKey,
+			jstring lpSubKey,
+			jint samDesired,
+			jint Reserved) {
+		if (lpSubKey == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpSubKey is null.");
+		}
+
+		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
+		jint ret = (jint)RegDeleteKeyEx(
+			(HKEY) hKey, 
+			(LPCWSTR) nativeLpSubKey, 
+			(REGSAM) samDesired, 
+			(DWORD) Reserved);
+		env->ReleaseStringChars(lpSubKey, nativeLpSubKey);
+		return ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegDeleteKeyValue(
+			JNIEnv* env,
+			jobject obj,
+			jint hKey,
+			jstring lpSubKey,
+			jstring lpValueName
+		) {
+		if (lpSubKey == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpSubKey is null.");
+		}
+		
+		if (lpValueName == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpValueName is null.");
+		}
+
+		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
+		const jchar* nativeLpValueName = env->GetStringChars(lpValueName, 0);
+		jint ret = (jint)RegDeleteKeyValue(
+			(HKEY)hKey,
+			(LPCWSTR)nativeLpSubKey,
+			(LPCWSTR)nativeLpValueName);
+		env->ReleaseStringChars(lpSubKey, nativeLpSubKey);
+		env->ReleaseStringChars(lpValueName, nativeLpValueName);
+		return ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegDeleteTree(
+			JNIEnv* env,
+			jobject obj,
+			jint hKey,
+			jstring lpSubKey) {
+		if (lpSubKey == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpSubKey is null.");
+		}
+
+		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
+		jint ret = (jint)RegDeleteTree((HKEY)hKey, (LPCWSTR)nativeLpSubKey);
 		env->ReleaseStringChars(lpSubKey, nativeLpSubKey);
 		return ret;
 	}
