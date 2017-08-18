@@ -43,7 +43,7 @@ public class WindowsRegistryLayer {
     public native int RegCopyTree(int hKeySrc, String lpSubKey, int hKeyDest);
     
     /**
-     * @see <a href="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724844(v=vs.85).aspx">
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724844(v=vs.85).aspx">
      * RegCreateKeyEx function</a>
      */
     public native int RegCreateKeyEx(int hKey,
@@ -55,6 +55,12 @@ public class WindowsRegistryLayer {
                                      SECURITY_ATTRIBUTES lpSecurityAttributes,
                                      PHKEY phkResult,
                                      LPDWORD lpdwDisposition);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724845(v=vs.85).aspx">
+     * RegDeleteKey function</a>
+     */
+    public native int RegDeleteKey(int hKey, String lpSubKey);
     
     /**
      * @param args the command line arguments
@@ -71,9 +77,10 @@ public class WindowsRegistryLayer {
         
         PHKEY phKey = new PHKEY();
         LPDWORD lpDword = new LPDWORD();
+        int ret2 = wrl.RegDeleteKey(phKey.value, "Console\\rodde");
         int ret = wrl.RegCreateKeyEx(
                 HKEY_CURRENT_USER, 
-                "Console\\rodde", 
+                null, //"Console\\rodde", 
                 0, 
                 "class", 
                 REG_OPTION_VOLATILE,

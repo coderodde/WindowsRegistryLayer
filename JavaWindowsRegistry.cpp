@@ -65,6 +65,13 @@ extern "C" {
 		 jobject phkResult,
 		 jobject lpdwDisposition)
 	{
+		if (lpSubKey == NULL) {
+			int i = 4;
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpSubKey is null.");
+		}
+
 		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
 		const jchar* nativeLpClass = env->GetStringChars(lpClass, 0);
 		jsize nativeLpClassLength = env->GetStringLength(lpClass);
@@ -102,6 +109,19 @@ extern "C" {
 		env->SetIntField(lpdwDisposition, fieldIdLPDWORD, (jint) dwDisposition);
 		env->SetIntField(phkResult, fieldIdPHKEY, (jint) hkResult);
 		return (jint) ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegDeleteKey
+		   (JNIEnv* env,
+			jobject obj, // Instance method; needs the reference.
+			jint hKey,
+			jstring lpSubKey)
+	{
+		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
+		jint ret = (jint) RegDeleteKey((HKEY)hKey, (LPCWSTR) nativeLpSubKey);  
+		env->ReleaseStringChars(lpSubKey, nativeLpSubKey);
+		return ret;
 	}
 
 #ifdef __cplusplus
