@@ -86,6 +86,25 @@ public class WindowsRegistryLayer {
     public native int RegDeleteTree(int hKey, String lpSubKey);
     
     /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724851(v=vs.85).aspx">
+     * RegDeleteValue function</a> 
+     */
+    public native int RegDeleteValue(int hKey, String lpValueName);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724862(v=vs.85).aspx">
+     * RegEnumKeyEx function</a> 
+     */
+    public native int RegEnumKeyEx(int hKey,
+                                   int dwIndex,
+                                   LPSTR lpName,
+                                   LPDWORD lpcName,
+                                   LPDWORD lpReserved,
+                                   LPSTR lpClass,
+                                   LPDWORD lpcClass,
+                                   PFILETIME lpftLastWriteTime);
+    
+    /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {

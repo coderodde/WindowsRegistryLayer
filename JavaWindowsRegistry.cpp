@@ -209,6 +209,74 @@ extern "C" {
 		return ret;
 	}
 
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegDeleteValue(
+			JNIEnv* env,
+			jobject obj,
+			jint hKey,
+			jstring lpValueName) {
+		if (lpValueName == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpValueName is null.");
+		}
+
+		const jchar* nativeLpValueName = env->GetStringChars(lpValueName, 0);
+		jint ret = (jint)RegDeleteValue((HKEY)hKey, (LPCWSTR)nativeLpValueName);
+		env->ReleaseStringChars(lpValueName, nativeLpValueName);
+		return ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegEnumKeyEx(
+			JNIEnv* env,
+			jobject obj,
+			jint hKey,
+			jint dwIndex,
+			jstring lpName,
+			jobject lpcName,
+			jobject lpReserved,
+			jobject lpClass,
+			jobject lpcClass,
+			jobject lpftLastWriteTime) {
+		if (lpName == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpName is null.");
+		}
+
+		if (lpcName == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpcName is null.");
+		}
+
+		const jchar* nativeLpName = env->GetStringChars(lpName, 0);
+		jsize nativeLpNameLength = env->GetStringLength(lpName);
+		jchar* modifiableNativeLpClass =
+			(jchar*)calloc(nativeLpNameLength + 1, sizeof(jchar));
+
+		wcscpy_s((wchar_t*)modifiableNativeLpClass,
+			nativeLpNameLength + 1,
+			(const wchar_t*)nativeLpName);
+
+		DWORD dwlpcName;
+		DWORD dwReserved;
+
+		jint ret = (jint)RegEnumKeyExW(
+			(HKEY)hKey,
+			(DWORD)dwIndex,
+			(LPWSTR)modifiableNativeLpClass,
+			&dwlpcName,
+			&dwReserved,
+			NULL, NULL, NULL);
+
+
+		env->ReleaseStringChars(lpName, nativeLpName);
+		free(modifiableNativeLpClass);
+		return ret;
+	}
+
 #ifdef __cplusplus
 }
 #endif
