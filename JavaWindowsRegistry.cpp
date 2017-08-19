@@ -233,7 +233,7 @@ extern "C" {
 			jobject obj,
 			jint hKey,
 			jint dwIndex,
-			jstring lpName,
+			jobject lpName,
 			jobject lpcName,
 			jobject lpReserved,
 			jobject lpClass,
@@ -251,8 +251,15 @@ extern "C" {
 			return env->ThrowNew(exClass, "lpcName is null.");
 		}
 
-		const jchar* nativeLpName = env->GetStringChars(lpName, 0);
-		jsize nativeLpNameLength = env->GetStringLength(lpName);
+		wchar_t lpNameBuffer[255];
+		wchar_t lpClassBuffer[255];
+
+		jclass clazz = env->FindClass("net/coderodde/windows/registry/LPSTR");
+		jfieldID fieldId = env->GetFieldID(clazz, "value", "Ljava/lang/String;");
+		jstring jstr = (jstring) env->GetObjectField(lpName, fieldId);
+
+		const jchar* nativeLpName = env->GetStringChars(jstr, 0);
+		jsize nativeLpNameLength = env->GetStringLength(jstr);
 		jchar* modifiableNativeLpClass =
 			(jchar*)calloc(nativeLpNameLength + 1, sizeof(jchar));
 
@@ -260,19 +267,40 @@ extern "C" {
 			nativeLpNameLength + 1,
 			(const wchar_t*)nativeLpName);
 
-		DWORD dwlpcName;
-		DWORD dwReserved;
+		const jchar* nativeLpClass = env->GetStringChars(lpClass, 0);
+
+		DWORD dwlpcName = 255;
+		DWORD dwlpcClass;
+
+		clazz = env->FindClass("net/coderodde/windows/registry/LPDWORD");
+		jfieldID fieldId = env->GetFieldID(clazz, "value", "I");
+		dwlpcName = (DWORD) env->GetIntField(lpcName, fieldId);
+
+		bool lpClassPresent = lpClass != NULL;
+		bool lpcClassPresent = lpcClass != NULL;
+
+		if (lpClassPresent != lpcClassPresent) {
+			const char* exClassName = "java/lang/IllegalArgumentException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpClass and lpcClass must be both null or both not null.");
+		}
+
+		FILETIME lpftLastWriteTimeStruct;
 
 		jint ret = (jint)RegEnumKeyExW(
 			(HKEY)hKey,
 			(DWORD)dwIndex,
-			(LPWSTR)modifiableNativeLpClass,
+			(LPWSTR) modifiableNativeLpClass,
 			&dwlpcName,
-			&dwReserved,
-			NULL, NULL, NULL);
+			NULL,
+			(lpClassPresent ? lpClassBuffer : NULL),
+			(lpcClassPresent ? &dwlpcClass : NULL),
+			(lpftLastWriteTime != NULL ? &lpftLastWriteTimeStruct : NULL)
+		);
 
+		// Pull off: lpName, lpcName, lpClass, lpcClass, lpftLastWriteTime
 
-		env->ReleaseStringChars(lpName, nativeLpName);
+		env->ReleaseStringChars(jstr, nativeLpName);
 		free(modifiableNativeLpClass);
 		return ret;
 	}
