@@ -52,9 +52,9 @@ extern "C" {
 			return env->ThrowNew(exClass, "lpSubKey is null.");
 		}
 
-		const char* nativeLpSubKey = env->GetStringUTFChars(lpSubKey, 0);
-		int ret = RegCopyTreeA((HKEY) hKeySrc, nativeLpSubKey, (HKEY) hKeyDest);
-		env->ReleaseStringUTFChars(lpSubKey, nativeLpSubKey);
+		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
+		int ret = RegCopyTreeW((HKEY) hKeySrc, (LPCWSTR)nativeLpSubKey, (HKEY) hKeyDest);
+		env->ReleaseStringChars(lpSubKey, nativeLpSubKey);
 		return ret;
 	}
 
@@ -84,9 +84,9 @@ extern "C" {
 		jchar* modifiableNativeLpClass = 
 			(jchar*) calloc(nativeLpClassLength + 1, sizeof(jchar));
 
-		wcscpy_s((wchar_t*) modifiableNativeLpClass, 
+		wcscpy_s((LPWSTR) modifiableNativeLpClass, 
 			      nativeLpClassLength + 1,
-			     (const wchar_t*) nativeLpClass);
+			     (LPCWSTR) nativeLpClass);
 
 		DWORD dwDisposition;
 		HKEY hkResult;
@@ -131,7 +131,7 @@ extern "C" {
 		}
 
 		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
-		jint ret = (jint) RegDeleteKey((HKEY)hKey, (LPCWSTR) nativeLpSubKey);  
+		jint ret = (jint) RegDeleteKeyW((HKEY)hKey, (LPCWSTR) nativeLpSubKey);  
 		env->ReleaseStringChars(lpSubKey, nativeLpSubKey);
 		return ret;
 	}
@@ -151,7 +151,7 @@ extern "C" {
 		}
 
 		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
-		jint ret = (jint)RegDeleteKeyEx(
+		jint ret = (jint)RegDeleteKeyExW(
 			(HKEY) hKey, 
 			(LPCWSTR) nativeLpSubKey, 
 			(REGSAM) samDesired, 
@@ -182,7 +182,7 @@ extern "C" {
 
 		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
 		const jchar* nativeLpValueName = env->GetStringChars(lpValueName, 0);
-		jint ret = (jint)RegDeleteKeyValue(
+		jint ret = (jint)RegDeleteKeyValueW(
 			(HKEY)hKey,
 			(LPCWSTR)nativeLpSubKey,
 			(LPCWSTR)nativeLpValueName);
@@ -204,7 +204,7 @@ extern "C" {
 		}
 
 		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
-		jint ret = (jint)RegDeleteTree((HKEY)hKey, (LPCWSTR)nativeLpSubKey);
+		jint ret = (jint)RegDeleteTreeW((HKEY)hKey, (LPCWSTR)nativeLpSubKey);
 		env->ReleaseStringChars(lpSubKey, nativeLpSubKey);
 		return ret;
 	}
@@ -222,7 +222,7 @@ extern "C" {
 		}
 
 		const jchar* nativeLpValueName = env->GetStringChars(lpValueName, 0);
-		jint ret = (jint)RegDeleteValue((HKEY)hKey, (LPCWSTR)nativeLpValueName);
+		jint ret = (jint)RegDeleteValueW((HKEY)hKey, (LPCWSTR)nativeLpValueName);
 		env->ReleaseStringChars(lpValueName, nativeLpValueName);
 		return ret;
 	}
@@ -373,7 +373,6 @@ extern "C" {
 		return ret;
 	}
 
-
 	JNIEXPORT jint JNICALL
 		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegEnumKeyEx(
 			JNIEnv* env,
@@ -473,6 +472,14 @@ extern "C" {
 		}
 
 		return ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegFlushKey(
+			JNIEnv* env,
+			jobject obj,
+			jint hKey) {
+		return (jint)RegFlushKey((HKEY)hKey);
 	}
 
 #ifdef __cplusplus
