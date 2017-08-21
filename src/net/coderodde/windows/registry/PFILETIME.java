@@ -6,5 +6,5 @@ package net.coderodde.windows.registry;
  */
 public class PFILETIME {
     public int dwLowDateTime;
-    public int dwHightDateTime;
+    public int dwHighDateTime;
 }

@@ -119,19 +119,19 @@ public class WindowsRegistryLayer {
         
         PHKEY phKey = new PHKEY();
         LPDWORD lpDword = new LPDWORD();
-        int ret2 = wrl.RegDeleteKey(phKey.value, "Console\\rodde");
-//        int ret = wrl.RegCreateKeyEx(
-//                HKEY_CURRENT_USER, 
-//                "Console\\rodde", 
-//                0, 
-//                "class", 
-//                REG_OPTION_VOLATILE,
-//                0,
-//                null,
-//                phKey,
-//                lpDword);
+        //int ret2 = wrl.RegDeleteKey(phKey.value, "Console\\rodde");
+        int ret = wrl.RegCreateKeyEx(
+                HKEY_CURRENT_USER, 
+                "Console\\rodde", 
+                0, 
+                "class", 
+                REG_OPTION_VOLATILE,
+                0,
+                null,
+                phKey,
+                lpDword);
         wrl.RegCloseKey(phKey.value);
-        System.out.println(ret2);
+        System.out.println(ret);
     }
     
 }
