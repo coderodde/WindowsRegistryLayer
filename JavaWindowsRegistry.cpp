@@ -251,6 +251,12 @@ extern "C" {
 			return env->ThrowNew(exClass, "lpcName is null.");
 		}
 
+		if (lpReserved != NULL) {
+			const char* exClassName = "java/lang/IllegalArgumentException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpReserved must be null.");
+		}
+
 		bool lpClassPresent = lpClass != NULL;
 		bool lpcClassPresent = lpcClass != NULL;
 
@@ -266,7 +272,7 @@ extern "C" {
 		DWORD dwlpcClass = 256;
 
 		// Get the name of the subkey:
-		jclass clazz = env->FindClass("net/coderodde/windows/registry/LPSTR");
+		jclass clazz = env->FindClass("net/coderodde/windows/registry/LPWSTR");
 		jfieldID fieldId = env->GetFieldID(clazz, "value", "Ljava/lang/String;");
 		jstring jstr = (jstring) env->GetObjectField(lpName, fieldId);
 
@@ -326,7 +332,7 @@ extern "C" {
 
 		// Pull off: lpName, lpcName, lpClass, lpcClass, lpftLastWriteTime
 		// Save lpName:
-		clazz = env->FindClass("net/coderodde/windows/registry/LPSTR");
+		clazz = env->FindClass("net/coderodde/windows/registry/LPWSTR");
 		fieldId = env->GetFieldID(clazz, "value", "Ljava/lang/String;");
 		jstring newLpName = env->NewString(modifiableNativeLpName, dwlpcName);
 		env->SetObjectField(lpName, fieldId, newLpName);
@@ -340,7 +346,7 @@ extern "C" {
 
 		if (lpClassPresent) {
 			// Save lpClass:
-			clazz = env->FindClass("net/coderodde/windows/registry/LPSTR");
+			clazz = env->FindClass("net/coderodde/windows/registry/LPWSTR");
 			fieldId = env->GetFieldID(clazz, "value", "Ljava/lang/String;");
 			jstring newLpClass = env->NewString(modifiableNativeLpClass, dwlpcClass);
 			env->SetObjectField(lpClass, fieldId, newLpClass);
@@ -364,6 +370,108 @@ extern "C" {
 		}
 
 		free(modifiableNativeLpName);
+		return ret;
+	}
+
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegEnumKeyEx(
+			JNIEnv* env,
+			jobject obj,
+			jint hKey,
+			jint dwIndex,
+			jobject lpValueName,
+			jobject lpcchValueName,
+			jobject lpReserved,
+			jobject lpType,
+			jobject lpData,
+			jobject lpcbData) {
+		if (lpValueName == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpValueName is null.");
+		}
+
+		if (lpcchValueName == NULL) {
+			const char* exClassName = "java/lang/NullPointerException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpcchValueName is null.");
+		}
+
+		if (lpReserved != NULL) {
+			const char* exClassName = "java/lang/IllegalArgumentException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpReserved must be null.");
+		}
+
+		if (lpData != NULL && lpcbData == NULL) {
+			const char* exClassName = "java/lang/IllegalArgumentException";
+			jclass exClass = env->FindClass(exClassName);
+			return env->ThrowNew(exClass, "lpcbData cannot be null when lpData is not null.");
+		}
+
+		DWORD dwlpcbData;
+
+		if (lpcbData != NULL) {
+			// Read lpcbData:
+			jclass clazz = env->FindClass("net/coderodde/windows/registry/LPDWORD");
+			jfieldID fieldId = env->GetFieldID(clazz, "value", "I");
+			dwlpcbData = env->GetIntField(lpcbData, fieldId);
+		}
+
+		wchar_t* valueName[32768];
+		DWORD cchValueName = 32768;
+		DWORD type;
+		LPBYTE data = NULL;
+
+		if (lpData != NULL) {
+			data = (LPBYTE)calloc(dwlpcbData + 1, sizeof(BYTE));
+		}
+
+		jint ret = (jint)RegEnumValueW(
+			(HKEY)hKey,
+			(DWORD)dwIndex,
+			(LPWSTR)valueName,
+			(LPDWORD)&cchValueName,
+			NULL,
+			&type,
+			data,
+			(lpcbData != NULL ? &dwlpcbData : NULL)
+		);
+
+		// Now save the state:
+		// Save valueName:
+		jclass clazz = env->FindClass("net/coderodde/windows/registry/LPWSTR");
+		jfieldID fieldId = env->GetFieldID(clazz, "value", "Ljava/lang/String;");
+		jstring jValueName = env->NewString((jchar*)valueName, cchValueName);
+		env->SetObjectField(lpValueName, fieldId, jValueName);
+
+		// Save lpcchValueName:
+		clazz = env->FindClass("net/coderodde/windows/registry/LPDWORD");
+		fieldId = env->GetFieldID(clazz, "value", "I");
+		env->SetIntField(lpcchValueName, fieldId, cchValueName);
+
+		// Save lpType:
+		if (lpType != NULL) {
+			env->SetIntField(lpType, fieldId, type);
+		}
+
+		// Save lpData:
+		if (lpData != NULL) {
+			jbyteArray byteArray = env->NewByteArray((jsize)dwlpcbData);
+			jbyte* arrayData = env->GetByteArrayElements(byteArray, 0);
+			strcpy_s((char*)arrayData, (size_t) dwlpcbData, (char*) data);
+			env->ReleaseByteArrayElements(byteArray, arrayData, 0);
+			free(data);
+		}
+
+		// Save lpcbData:
+		if (lpcbData != NULL) {
+			clazz = env->FindClass("net/coderodde/windows/registry/LPDWORD");
+			fieldId = env->GetFieldID(clazz, "value", "I");
+			env->SetIntField(lpcbData, fieldId, dwlpcbData);
+		}
+
 		return ret;
 	}
 

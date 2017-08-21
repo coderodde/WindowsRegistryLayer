@@ -6,6 +6,6 @@ package net.coderodde.windows.registry;
  * @author Rodion "rodde" Efremov
  * @version 1.6 (Aug 18, 2017)
  */
-public class LPSTR {
+public class LPWSTR {
     String value;
 }

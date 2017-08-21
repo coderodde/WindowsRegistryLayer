@@ -97,12 +97,43 @@ public class WindowsRegistryLayer {
      */
     public native int RegEnumKeyEx(int hKey,
                                    int dwIndex,
-                                   LPSTR lpName,
+                                   LPWSTR lpName,
                                    LPDWORD lpcName,
                                    LPDWORD lpReserved,
-                                   LPSTR lpClass,
+                                   LPWSTR lpClass,
                                    LPDWORD lpcClass,
                                    PFILETIME lpftLastWriteTime);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724865(v=vs.85).aspx">
+     * RegEnumValue function</a> 
+     */
+    public native int RegEnumValue(int hKey,
+                                   int dwIndex,
+                                   LPWSTR lpValueName,
+                                   LPDWORD lpcchValueName,
+                                   LPDWORD lpReserved,
+                                   LPDWORD lpType,
+                                   LPBYTE lpData,
+                                   LPDWORD lpcbData);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724867(v=vs.85).aspx">
+     * RegFlushKey function</a> 
+     */
+    public native int RegFlushKey(int hKey);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724868(v=vs.85).aspx">
+     * RegGetValue function</a> 
+     */
+    public native int RegGetValue(int hKey,
+                                  LPWSTR lpSubKey,
+                                  LPWSTR lpValue,
+                                  int dwFlags,
+                                  LPDWORD pdwType,
+                                  PVOID pvData,
+                                  LPDWORD pcbData);
     
     /**
      * @param args the command line arguments
