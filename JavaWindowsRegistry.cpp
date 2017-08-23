@@ -741,6 +741,49 @@ extern "C" {
 			(lpftLastWriteTime ? &ftLastWriteTime : NULL));
 
 		// Start recovering the data:
+		if (lpClassStringBuffer != NULL) {
+			jstring newClassJavaString = env->NewString(
+				(const jchar*)lpClassStringBuffer,
+				wcslen(lpClassStringBuffer));
+			setObject(env, lpClass, PKG "LPWSTR", "value", SIG_STRING, newClassJavaString);
+		}
+
+		if (lpcClass != NULL) {
+			setInt(env, lpcClass, PKG "LPDWORD", "value", (jint)dwlpcClass);
+		}
+
+		if (lpcSubKeys != NULL) {
+			setInt(env, lpcSubKeys, PKG "LPDWORD", "value", (jint)dwlpcSubKeys);
+		}
+
+		if (lpcMaxSubKeyLen != NULL) {
+			setInt(env, lpcMaxSubKeyLen, PKG "LPDWORD", "value", (jint)dwlpcMaxSubKeyLen);
+		}
+
+		if (lpcMaxClassLen != NULL) {
+			setInt(env, lpcMaxClassLen, PKG "LPDWORD", "value", (jint)dwlpcMaxClassLen);
+		}
+
+		if (lpcValues != NULL) {
+			setInt(env, lpcValues, PKG "LPDWORD", "value", (jint)dwlpcValues);
+		}
+
+		if (lpcMaxValueNameLen != NULL) {
+			setInt(env, lpcMaxValueNameLen, PKG "LPDWORD", "value", (jint)dwlpcMaxValueNameLen);
+		}
+
+		if (lpcMaxValueLen != NULL) {
+			setInt(env, lpcMaxValueLen, PKG "LPDWORD", "value", (jint)dwlpcMaxValueLen);
+		}
+
+		if (lpcbSecurityDescriptor != NULL) {
+			setInt(env, lpcbSecurityDescriptor, PKG "LPDWORD", "value", (jint)dwlpcbSecurityDescriptor);
+		}
+
+		if (lpftLastWriteTime != NULL) {
+			setInt(env, lpftLastWriteTime, PKG "PFILETIME", "dwLowDateTime", (jint)ftLastWriteTime.dwLowDateTime);
+			setInt(env, lpftLastWriteTime, PKG "PFILETIME", "dwHighDateTime", (jint)ftLastWriteTime.dwHighDateTime);
+		}
 
 		return (jint)ret;
 	}
