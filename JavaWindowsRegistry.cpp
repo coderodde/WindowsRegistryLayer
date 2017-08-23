@@ -686,6 +686,65 @@ extern "C" {
 		return ret;
 	}
 
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegQueryInfoKey(
+			JNIEnv* env,
+			jobject obj,
+			_In_		jint hKey,
+			_Out_opt_	jobject lpClass,
+			_Inout_opt_ jobject lpcClass,
+			_Reserved_	jobject lpReserved,
+			_Out_opt_	jobject lpcSubKeys,
+			_Out_opt_	jobject lpcMaxSubKeyLen,
+			_Out_opt_	jobject lpcMaxClassLen,
+			_Out_opt_	jobject lpcValues,
+			_Out_opt_	jobject lpcMaxValueNameLen,
+			_Out_opt_	jobject lpcMaxValueLen,
+			_Out_opt_	jobject lpcbSecurityDescriptor,
+			_Out_opt_	jobject lpftLastWriteTime) {
+		DWORD dwlpcClass;
+		DWORD dwlpReserved;
+		DWORD dwlpcSubKeys;
+		DWORD dwlpcMaxSubKeyLen;
+		DWORD dwlpcMaxClassLen;
+		DWORD dwlpcValues;
+		DWORD dwlpcMaxValueNameLen;
+		DWORD dwlpcMaxValueLen;
+		DWORD dwlpcbSecurityDescriptor;
+		FILETIME ftLastWriteTime;
+
+		LPWSTR lpClassStringBuffer = NULL;
+
+		if (lpClass != NULL) {
+			jstring javaString = (jstring)getObject(env, lpClass, PKG "LPWSTR", "value", SIG_STRING);
+			jsize javaStringLength = env->GetStringLength(javaString);
+			const jchar* javaStringChars = env->GetStringChars(javaString, NULL);
+			lpClassStringBuffer = (LPWSTR)calloc(javaStringLength + 1, sizeof(jchar));
+			wcscpy_s(
+				(wchar_t*)lpClassStringBuffer, 
+				javaStringLength, 
+				(const wchar_t*)javaStringChars);
+		}
+
+		LONG ret = RegQueryInfoKeyW(
+			(HKEY)hKey,
+			lpClassStringBuffer,
+			(lpcClass ? &dwlpcClass : NULL),
+			(lpReserved ? &dwlpReserved : NULL),
+			(lpcSubKeys ? &dwlpcSubKeys : NULL),
+			(lpcMaxSubKeyLen ? &dwlpcMaxSubKeyLen : NULL),
+			(lpcMaxClassLen ? &dwlpcMaxClassLen : NULL),
+			(lpcValues ? &dwlpcValues : NULL),
+			(lpcMaxValueNameLen ? &dwlpcMaxValueNameLen : NULL),
+			(lpcMaxValueLen ? &dwlpcMaxValueLen : NULL),
+			(lpcbSecurityDescriptor ? &dwlpcbSecurityDescriptor : NULL),
+			(lpftLastWriteTime ? &ftLastWriteTime : NULL));
+
+		// Start recovering the data:
+
+		return (jint)ret;
+	}
+
 #ifdef __cplusplus
 }
 #endif

@@ -162,6 +162,23 @@ public class WindowsRegistryLayer {
                                              PHKEY phkResult);
     
     /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724902(v=vs.85).aspx">
+     * RegQueryInfoKey function</a> 
+     */
+    public native int RegQueryInfoKey(int hKey,
+                                      LPWSTR lpClass,
+                                      LPDWORD lpcClass,
+                                      LPDWORD lpReserved,
+                                      LPDWORD lpcSubKeys,
+                                      LPDWORD lpcMaxSubKeyLen,
+                                      LPDWORD lpcMaxClassLen,
+                                      LPDWORD lpcValues,
+                                      LPDWORD lpcMaxValueNameLen,
+                                      LPDWORD lpcMaxValueLen,
+                                      LPDWORD lpcbSecurityDescriptor,
+                                      PFILETIME lpftLastWriteTime);
+    
+    /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
