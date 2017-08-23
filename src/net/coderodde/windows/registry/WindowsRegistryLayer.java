@@ -136,6 +136,32 @@ public class WindowsRegistryLayer {
                                   LPDWORD pcbData);
     
     /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724894(v=vs.85).aspx">
+     * RegOpenCurrentUser function</a> 
+     */
+    public native int RegOpenCurrentUser(int samDesired,
+                                         PHKEY phkResult);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724897(v=vs.85).aspx">
+     * RegOpenKeyEx function</a> 
+     */
+    public native int RegOpenKeyEx(int hKey,
+                                   LPWSTR lpSubKey,
+                                   int ulOptions,
+                                   int samDesired,
+                                   PHKEY phkResult);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724899(v=vs.85).aspx">
+     * RegOpenUserClassesRoot function</a> 
+     */
+    public native int RegOpenUserClassesRoot(int hToken,
+                                             int dwOptions,
+                                             int samDesired,
+                                             PHKEY phkResult);
+    
+    /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {

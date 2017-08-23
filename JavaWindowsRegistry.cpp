@@ -394,7 +394,7 @@ extern "C" {
 
 		// Try read the lpcClass:
 		if (lpcClass != NULL) {
-			dwlpcClass = (DWORD)getInt(env, lpcClass, "LPDWORD", "value");
+			dwlpcClass = (DWORD)getInt(env, lpcClass, PKG "LPDWORD", "value");
 		}
 
 		DWORD dwReserved;
@@ -415,7 +415,7 @@ extern "C" {
 		setObject(env, lpName, PKG "LPWSTR", "value", SIG_STRING, lpNameResultValueString);
 
 		// Save lpcName:
-		setInt(env, lpcName, "LPDWORD", "value", (jint)dwlpcName);
+		setInt(env, lpcName, PKG "LPDWORD", "value", (jint)dwlpcName);
 
 		// Try save lpClassBuffer:
 		if (lpClassStringBuffer != NULL) {
@@ -425,7 +425,7 @@ extern "C" {
 
 		// Try save lpcClass:
 		if (lpcClass != NULL) {
-			setInt(env, lpcClass, "LPDWORD", "value", dwlpcName);
+			setInt(env, lpcClass, PKG "LPDWORD", "value", dwlpcName);
 		}
 
 		// Try save lpftLastWriteTime:
@@ -491,7 +491,7 @@ extern "C" {
 		env->ReleaseStringChars(lpValueNameString, lpValueNameStringChars);
 
 		// Read lpcchValueName:
-		DWORD dwlpcchValueName = (DWORD)getInt(env, lpcchValueName, "LPDWORD", "value");
+		DWORD dwlpcchValueName = (DWORD)getInt(env, lpcchValueName, PKG "LPDWORD", "value");
 		DWORD dwlpcbData;
 		DWORD dwReserved;
 		DWORD dwType;
@@ -500,7 +500,7 @@ extern "C" {
 		jbyteArray arr = NULL;
 
 		if (lpData != NULL) {
-			arr = (jbyteArray)getObject(env, lpData, "LPBYTE", "value", SIG_BYTE_ARRAY);
+			arr = (jbyteArray)getObject(env, lpData, PKG "LPBYTE", "value", SIG_BYTE_ARRAY);
 			jsize arrLength = env->GetArrayLength(arr);
 			bytes = (LPBYTE)calloc(arrLength, sizeof(BYTE));
 		}
@@ -525,19 +525,19 @@ extern "C" {
 			env->NewString(
 				(const jchar*)lpValueNameStringBuffer,
 				dwlpcchValueName);
-		setObject(env, lpValueName, "LPWSTR", "value", SIG_STRING, lpValueNameResultString);
+		setObject(env, lpValueName, PKG "LPWSTR", "value", SIG_STRING, lpValueNameResultString);
 
 		// Save lpcchValueName:
-		setInt(env, lpcchValueName, "LPDWORD", "value", (jint)dwlpcchValueName);
+		setInt(env, lpcchValueName, PKG "LPDWORD", "value", (jint)dwlpcchValueName);
 
 		// Try save lpType:
 		if (lpType != NULL) {
-			setInt(env, lpType, "LPDWORD", "value", (jint)dwType);
+			setInt(env, lpType, PKG "LPDWORD", "value", (jint)dwType);
 		}
 
 		// Try save lpData:
 		if (lpData != NULL) {
-			jbyteArray arr = (jbyteArray)getObject(env, lpData, "LPBYTE", "value", SIG_BYTE_ARRAY);
+			jbyteArray arr = (jbyteArray)getObject(env, lpData, PKG "LPBYTE", "value", SIG_BYTE_ARRAY);
 			jbyte* javaBytes = env->GetByteArrayElements(arr, NULL);
 			jsize sz = env->GetArrayLength(arr);
 			strcpy_s((char*) javaBytes, sz, (const char*) bytes);
@@ -546,10 +546,143 @@ extern "C" {
 
 		// Try save lpcbData:
 		if (lpcbData != NULL) {
-			setInt(env, lpcbData, "LPDWORD", "value", (jint)dwlpcbData);
+			setInt(env, lpcbData, PKG "LPDWORD", "value", (jint)dwlpcbData);
 		}
 
 		free(lpValueNameStringBuffer);
+		return ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegGetValue(
+						JNIEnv* env,
+						jobject obj,
+			_In_		jint hKey,
+			_In_opt_	jobject lpSubKey,
+			_In_opt_	jobject lpValue,
+			_In_opt_	jint dwFlags,
+			_Out_opt_	jobject pdwType,
+			_Out_opt_	jobject pvData,
+			_Inout_opt_ jobject pcbData) {
+		LPCWSTR lpSubKeyStringBuffer = NULL;
+		LPCWSTR lpValueStringBuffer = NULL;
+		DWORD dwType;
+		PVOID data = NULL;
+		jbyteArray javaDataArray = NULL;
+		DWORD cbData;
+
+		if (lpSubKey != NULL) {
+			jstring lpSubKeyString = (jstring)getObject(env, lpSubKey, PKG "LPWSTR", "value", SIG_STRING);
+			lpSubKeyStringBuffer = (LPCWSTR)env->GetStringChars(lpSubKeyString, NULL);
+		}
+
+		if (lpValue != NULL) {
+			jstring lpValueString = (jstring)getObject(env, lpValue, PKG "LPWSTR", "value", SIG_STRING);
+			lpValueStringBuffer = (LPCWSTR)env->GetStringChars(lpValueString, NULL);
+		}
+
+		if (pvData != NULL) {
+			javaDataArray = (jbyteArray)getObject(env, pvData, PKG "PVOID", "value", SIG_BYTE_ARRAY);
+			jsize arrLength = env->GetArrayLength(javaDataArray);
+			data = (PVOID)calloc(arrLength, sizeof(BYTE));
+		}
+
+		LONG ret = RegGetValueW(
+			(HKEY)hKey,
+			(lpSubKey ? lpSubKeyStringBuffer : NULL),
+			(lpValue ? lpValueStringBuffer : NULL),
+			(DWORD)dwFlags,
+			(pdwType ? &dwType : NULL),
+			(pvData ? data : NULL),
+			(pcbData ? &cbData : NULL));
+
+		// Release memory:
+		free((void*)lpSubKeyStringBuffer);
+		free((void*)lpValueStringBuffer);
+
+		// Recover output data:
+		if (pdwType != NULL) {
+			setInt(env, pdwType, PKG "LPDWORD", "value", (jint)dwType);
+		}
+
+		if (pvData != NULL) {
+			env->ReleaseByteArrayElements(javaDataArray, (jbyte*)data, 0);
+		}
+
+		if (pcbData != NULL) {
+			setInt(env, pcbData, PKG "LPDWORD", "value", (jint)cbData);
+		}
+
+		return (jint)ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegOpenCurrentUser(
+			JNIEnv* env,
+			jobject obj,
+			jint samDesired,
+			jobject phkResult) {
+		HKEY hkResult;
+		LONG ret = RegOpenCurrentUser(
+			(REGSAM)samDesired,
+			&hkResult);
+
+		setInt(env, phkResult, PKG "PHKEY", "value", (jint)hkResult);
+		return (jint)ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegOpenKeyEx(
+			JNIEnv* env,
+			jobject obj,
+			jint hKey,
+			jobject lpSubKey,
+			jint ulOptions,
+			jint samDesired,
+			jobject phkResult) {
+		LPCWSTR lpSubKeyStringBuffer = NULL;
+		HKEY hkeyResult;
+
+		if (lpSubKey != NULL) {
+			jstring lpSubKeyJavaString = (jstring)getObject(env, lpSubKey, PKG "LPWSTR", "value", SIG_STRING);
+			lpSubKeyStringBuffer = (LPCWSTR)env->GetStringChars(lpSubKeyJavaString, NULL);
+		}
+
+		LONG ret = RegOpenKeyExW(
+			(HKEY)hKey,
+			lpSubKeyStringBuffer,
+			(DWORD)ulOptions,
+			(REGSAM)samDesired,
+			&hkeyResult);
+
+		if (phkResult != NULL) {
+			setInt(env, phkResult, PKG "PHKEY", "value", (jint)hkeyResult);
+		}
+
+		return (jint)ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegOpenUserClassesRoot(
+			JNIEnv* env,
+			jobject obj,
+			jint hToken,
+			jint dwOptions,
+			jint samDesired,
+			jobject phkResult) {
+		if (phkResult == NULL) {
+			return throwNullPointerException(env, "phkResult is null.");
+		}
+
+		HKEY hkeyResult;
+
+		LONG ret = RegOpenUserClassesRoot(
+			(HANDLE)hToken,
+			(DWORD)dwOptions,
+			(REGSAM)samDesired,
+			&hkeyResult);
+
+		setInt(env, phkResult, PKG "PHKEY", "value", (jint)hkeyResult);
 		return ret;
 	}
 

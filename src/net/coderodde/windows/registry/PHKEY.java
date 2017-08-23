@@ -7,5 +7,5 @@ package net.coderodde.windows.registry;
  * @version 1.6 (Aug 17, 2017)
  */
 public class PHKEY {
-    int value;
+    public int value;
 }
