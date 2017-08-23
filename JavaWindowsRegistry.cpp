@@ -6,6 +6,8 @@
 
 #define PKG "net/coderodde/windows/registry/"
 #define SIG_STRING "Ljava/lang/String;" // String signature.
+#define KEY_NAME_MAX_LENGTH 255
+#define VALUE_NAME_MAX_LENGTH 16383
 
 /*************************************************************************************
 * Throws an exception of class 'exceptionClassName' with message 'exceptionMessage'. *
@@ -73,9 +75,10 @@ static jint getInt(
 	return env->GetIntField(obj, fid);
 }
 
-/**************************************************************************************************
-* Sets an object field to 'obj' of class 'className' field 'fielName' with signature 'signature'. *
-**************************************************************************************************/
+/**********************************************************************
+* Sets an object field to 'obj' of class 'className' field 'fielName' *
+* with signature 'signature'.                                         *
+**********************************************************************/
 static void setObject(
 	JNIEnv* env,
 	jobject obj,
@@ -86,6 +89,22 @@ static void setObject(
 	jclass clazz = env->FindClass(className);
 	jfieldID fid = env->GetFieldID(clazz, fieldName, signature);
 	env->SetObjectField(obj, fid, value);
+}
+
+/********************************************************************
+* Gets an object field named 'fieldName' from object 'obj' of class *
+* 'className' having signature 'signature'.                         *
+********************************************************************/
+static jobject getObject(
+	JNIEnv* env,
+	jobject obj,
+	const char* className,
+	const char* fieldName,
+	const char* signature
+) {
+	jclass clazz = env->FindClass(className);
+	jfieldID fid = env->GetFieldID(clazz, fieldName, signature);
+	return env->GetObjectField(obj, fid);
 }
 
 #ifdef __cplusplus
@@ -323,121 +342,106 @@ extern "C" {
 			jobject lpClass,
 			jobject lpcClass,
 			jobject lpftLastWriteTime) {
-		if (lpName == NULL) {
-			return throwNullPointerException(env, "lpName is null.");
-		}
-
 		if (lpcName == NULL) {
-			return throwNullPointerException(env, "lpcName is null.");
+			return throwNullPointerException(env, "DWORD lpcName is null.");
 		}
 
-		if (lpReserved != NULL) {
-			return throwIllegalArgumentException(env, "lpReserved must be null.");
-		}
+		jstring lpNameString = NULL;
+		jstring lpClassString = NULL;
+
+		LPWSTR lpNameStringBuffer = NULL;
+		LPWSTR lpClassStringBuffer = NULL;
 
 		bool lpClassPresent = lpClass != NULL;
 		bool lpcClassPresent = lpcClass != NULL;
 
-		if (lpClassPresent != lpcClassPresent) {
-			return throwIllegalArgumentException(env, "lpClass and lpcClass must be both null or both not null.");
-		}
+		DWORD dwlpcName;
+		DWORD dwlpcClass;
 
-		wchar_t lpNameBuffer[256];
-		wchar_t lpClassBuffer[256];
-		DWORD dwlpcName = 256;
-		DWORD dwlpcClass = 256;
-
-		// Get the name of the subkey:
-		jclass clazz = env->FindClass("net/coderodde/windows/registry/LPWSTR");
-		jfieldID fieldId = env->GetFieldID(clazz, "value", "Ljava/lang/String;");
-		jstring jstr = (jstring) env->GetObjectField(lpName, fieldId);
-
-		// Copy the lpName to lpNameBuffer:
-		const jchar* nativeLpName = env->GetStringChars(jstr, 0);
-		jsize nativeLpNameLength = env->GetStringLength(jstr);
-		jchar* modifiableNativeLpName =
-			(jchar*)calloc(nativeLpNameLength + 1, sizeof(jchar));
-
-		wcscpy_s((wchar_t*)modifiableNativeLpName,
-			nativeLpNameLength + 1,
-			(const wchar_t*)nativeLpName);
-
-		dwlpcName = (DWORD)(nativeLpNameLength + 1);
+		// Read the value of lpcName:
+		dwlpcName = (DWORD)getInt(env, lpcName, PKG "LPDWORD", "value");
 		
-		jchar* modifiableNativeLpClass = NULL;
-		jstring jstr2 = NULL;
-		const jchar* nativeLpClass = NULL;
+		// Try create the buffer for lpName:
+		if (lpName != NULL) {
+			lpNameString = (jstring)getObject(env, lpName, PKG "LPWSTR", "value", SIG_STRING);
+			jsize lpNameStringLength = env->GetStringLength(lpNameString);
+			lpNameStringBuffer = (LPWSTR)calloc(lpNameStringLength + 1, sizeof(wchar_t));
+			const jchar* lpNameStringChars = env->GetStringChars(lpNameString, NULL);
 
-		// Now, modifiableNativeLpClass contains the name of the subkey:
-		if (lpClassPresent) {
-			jstr2 = (jstring)env->GetObjectField(lpClass, fieldId);
+			wcscpy_s(
+				lpNameStringBuffer, 
+				lpNameStringLength + 1, 
+				(wchar_t*) lpNameStringChars);
 
-			// Copy the lpClass to lpClassBuffer:
-			nativeLpClass = env->GetStringChars(jstr2, 0);
-			jsize nativeLpClassLength = env->GetStringLength(jstr2);
-			modifiableNativeLpClass =
-				(jchar*)calloc(nativeLpClassLength + 1, sizeof(jchar));
-
-			wcscpy_s((wchar_t*)modifiableNativeLpClass,
-				nativeLpClassLength + 1,
-				(const wchar_t*)nativeLpClass);
-
-			dwlpcClass = (DWORD)(nativeLpClassLength + 1);
+			env->ReleaseStringChars(lpNameString, lpNameStringChars);
 		}
 
-		clazz = env->FindClass("net/coderodde/windows/registry/LPDWORD");
-		fieldId = env->GetFieldID(clazz, "value", "I");
-		dwlpcName = (DWORD) env->GetIntField(lpcName, fieldId);
+		// Try create the buffer for lpClass:
+		if (lpClass != NULL) {
+			lpClassString = (jstring)getObject(env, lpClass, PKG "LPWSTR", "value", SIG_STRING);
+			jsize lpClassStringLength = env->GetStringLength(lpClassString);
+			lpClassStringBuffer = (LPWSTR)calloc(lpClassStringLength + 1, sizeof(wchar_t));
+			const jchar* lpClassStringChars = env->GetStringChars(lpClassString, NULL);
 
-		if (lpClassPresent) {
-			dwlpcClass = (DWORD)env->GetIntField(lpcClass, fieldId);
+			wcscpy_s(
+				lpClassStringBuffer,
+				lpClassStringLength + 1,
+				(wchar_t*)lpClassStringChars);
+
+			env->ReleaseStringChars(lpClassString, lpClassStringChars);
 		}
 
-		FILETIME lpftLastWriteTimeStruct;
+		// Try read the lpcClass:
+		if (lpcClass != NULL) {
+			dwlpcClass = (DWORD)getInt(env, lpcClass, "LPDWORD", "value");
+		}
+
+		DWORD dwReserved;
+		FILETIME fileTime;
 
 		jint ret = (jint)RegEnumKeyExW(
 			(HKEY)hKey,
 			(DWORD)dwIndex,
-			(LPWSTR) modifiableNativeLpName,
+			(lpName ? lpNameStringBuffer : NULL),
 			&dwlpcName,
-			NULL,
-			(lpClassPresent ? (LPWSTR) modifiableNativeLpClass : NULL),
-			(lpcClassPresent ? &dwlpcClass : NULL),
-			(lpftLastWriteTime != NULL ? &lpftLastWriteTimeStruct : NULL)
-		);
+			(lpReserved ? &dwReserved : NULL),
+			(lpClass ? lpClassStringBuffer : NULL),
+			(lpcClass ? &dwlpcClass : NULL),
+			(lpftLastWriteTime ? &fileTime : NULL));
 
-		// Pull off: lpName, lpcName, lpClass, lpcClass, lpftLastWriteTime
-		// Save lpName:
-		jstring newLpName = env->NewString(modifiableNativeLpName, dwlpcName);
+		// Save lpNameBuffer:
+		jstring lpNameResultValueString = env->NewString((jchar*) lpNameStringBuffer, dwlpcName);
+		setObject(env, lpName, PKG "LPWSTR", "value", SIG_STRING, lpNameResultValueString);
 
-		setObject(env, lpName, PKG "LPWSTR", "value", SIG_STRING, newLpName);
-
-		env->ReleaseStringChars(jstr, nativeLpName);
-		free(modifiableNativeLpName);
-		
 		// Save lpcName:
-		setInt(env, lpcName, PKG "LPDWORD", "value", dwlpcName);
+		setInt(env, lpcName, "LPDWORD", "value", (jint)dwlpcName);
 
-		jstring newLpClass = env->NewString(modifiableNativeLpClass, dwlpcClass);
-
-		if (lpClassPresent) {
-			// Save lpClass:
-			setObject(env, lpClass, PKG "LPWSTR", "value", SIG_STRING, newLpClass);
-
-			// Save lpcClass:
-			setInt(env, lpcClass, PKG "LPDWORD", "value", dwlpcClass);
-
-			env->ReleaseStringChars(jstr2, nativeLpClass);
-			free(modifiableNativeLpClass);
+		// Try save lpClassBuffer:
+		if (lpClassStringBuffer != NULL) {
+			jstring lpClassResultValueString = env->NewString((jchar*)lpClassStringBuffer, dwlpcClass);
+			setObject(env, lpClass, PKG "LPWSTR", "value", SIG_STRING, lpClassResultValueString);
 		}
 
-		// Finally, deal with FILETIME:
+		// Try save lpcClass:
+		if (lpcClass != NULL) {
+			setInt(env, lpcClass, "LPDWORD", "value", dwlpcName);
+		}
+
+		// Try save lpftLastWriteTime:
 		if (lpftLastWriteTime != NULL) {
-			setInt(env, lpftLastWriteTime, PKG "PFILETIME", "dwLowDateTime", lpftLastWriteTimeStruct.dwLowDateTime);
-			setInt(env, lpftLastWriteTime, PKG "PFILETIME", "dwHighDateTime", lpftLastWriteTimeStruct.dwHighDateTime);
+			setInt(env, lpftLastWriteTime, PKG "PFILETIME", "dwLowDateTime", fileTime.dwLowDateTime);
+			setInt(env, lpftLastWriteTime, PKG "PFILETIME", "dwHighDateTime", fileTime.dwHighDateTime);
 		}
 
-		free(modifiableNativeLpName);
+		// Release resources:
+		if (lpNameStringBuffer != NULL) {
+			free(lpNameStringBuffer);
+		}
+
+		if (lpClassStringBuffer != NULL) {
+			free(lpClassStringBuffer);
+		}
+
 		return ret;
 	}
 
