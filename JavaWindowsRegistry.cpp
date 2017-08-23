@@ -6,6 +6,7 @@
 
 #define PKG "net/coderodde/windows/registry/"
 #define SIG_STRING "Ljava/lang/String;" // String signature.
+#define SIG_BYTE_ARRAY "[B"
 #define KEY_NAME_MAX_LENGTH 255
 #define VALUE_NAME_MAX_LENGTH 16383
 
@@ -332,16 +333,16 @@ extern "C" {
 
 	JNIEXPORT jint JNICALL
 		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegEnumKeyEx(
-			JNIEnv* env,
-			jobject obj,
-			jint hKey,
-			jint dwIndex,
-			jobject lpName,
-			jobject lpcName,
-			jobject lpReserved,
-			jobject lpClass,
-			jobject lpcClass,
-			jobject lpftLastWriteTime) {
+						JNIEnv* env,
+						jobject obj,
+			_In_		jint	hKey,
+			_In_		jint	dwIndex,
+			_Out_		jobject lpName,
+			_Inout_		jobject lpcName,
+			_Reserved_	jobject lpReserved,
+			_Inout_		jobject lpClass,
+			_Inout_opt_ jobject lpcClass,
+			_Out_opt_	jobject lpftLastWriteTime) {
 		if (lpcName == NULL) {
 			return throwNullPointerException(env, "DWORD lpcName is null.");
 		}
@@ -446,17 +447,25 @@ extern "C" {
 	}
 
 	JNIEXPORT jint JNICALL
-		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegEnumValue(
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegFlushKey(
 			JNIEnv* env,
 			jobject obj,
-			jint hKey,
-			jint dwIndex,
-			jobject lpValueName,
-			jobject lpcchValueName,
-			jobject lpReserved,
-			jobject lpType,
-			jobject lpData,
-			jobject lpcbData) {
+			jint hKey) {
+		return (jint)RegFlushKey((HKEY)hKey);
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegEnumValue(
+						JNIEnv* env,
+						jobject obj,
+			_In_		jint	hKey,
+			_In_		jint	dwIndex,
+			_Out_		jobject lpValueName,
+			_Inout_		jobject lpcchValueName,
+			_Reserved_	jobject lpReserved,
+			_Out_opt_	jobject lpType,
+			_Out_opt_	jobject lpData,
+			_Inout_opt_ jobject lpcbData) {
 		if (lpValueName == NULL) {
 			return throwNullPointerException(env, "lpValueName is null.");
 		}
@@ -465,79 +474,83 @@ extern "C" {
 			return throwNullPointerException(env, "lpcchValueName is null.");
 		}
 
-		if (lpReserved != NULL) {
-			return throwIllegalArgumentException(env, "lpReserved must be null.");
-		}
+		jstring lpValueNameString = NULL;
+		LPWSTR lpValueNameStringBuffer = NULL;
 
-		if (lpData != NULL && lpcbData == NULL) {
-			return throwIllegalArgumentException(
-				env, 
-				"lpcbData cannot be null when lpData is not null.");		
-		}
+		// Create and populate lpValueName:
+		lpValueNameString = (jstring)getObject(env, lpValueName, PKG "LPWSTR", "value", SIG_STRING);
+		jsize lpValueNameStringLength = env->GetStringLength(lpValueNameString);
+		lpValueNameStringBuffer = (LPWSTR)calloc(lpValueNameStringLength + 1, sizeof(wchar_t));
+		const jchar* lpValueNameStringChars = env->GetStringChars(lpValueNameString, NULL);
 
+		wcscpy_s(
+			lpValueNameStringBuffer,
+			lpValueNameStringLength + 1,
+			(wchar_t*)lpValueNameStringChars);
+
+		env->ReleaseStringChars(lpValueNameString, lpValueNameStringChars);
+
+		// Read lpcchValueName:
+		DWORD dwlpcchValueName = (DWORD)getInt(env, lpcchValueName, "LPDWORD", "value");
 		DWORD dwlpcbData;
+		DWORD dwReserved;
+		DWORD dwType;
+
+		LPBYTE bytes = NULL;
+		jbyteArray arr = NULL;
+
+		if (lpData != NULL) {
+			arr = (jbyteArray)getObject(env, lpData, "LPBYTE", "value", SIG_BYTE_ARRAY);
+			jsize arrLength = env->GetArrayLength(arr);
+			bytes = (LPBYTE)calloc(arrLength, sizeof(BYTE));
+		}
 
 		if (lpcbData != NULL) {
 			// Read lpcbData:
 			dwlpcbData = (DWORD)getInt(env, lpcbData, PKG "LPDWORD", "value");
 		}
 
-		wchar_t* valueName[32768];
-		DWORD cchValueName = 32768;
-		DWORD type;
-		LPBYTE data = NULL;
-
-		if (lpData != NULL) {
-			data = (LPBYTE)calloc(dwlpcbData + 1, sizeof(BYTE));
-		}
-
 		jint ret = (jint)RegEnumValueW(
 			(HKEY)hKey,
 			(DWORD)dwIndex,
-			(LPWSTR)valueName,
-			(LPDWORD)&cchValueName,
-			NULL,
-			&type,
-			data,
-			(lpcbData != NULL ? &dwlpcbData : NULL)
-		);
+			lpValueNameStringBuffer,
+			&dwlpcchValueName,
+			(lpReserved ? &dwReserved : NULL),
+			(lpType ? &dwType : NULL),
+			(lpData ? bytes : NULL),
+			(lpcbData ? &dwlpcbData : NULL));
 
-		// Now save the state:
-		// Save valueName:
-		jstring jValueName = env->NewString((jchar*)valueName, cchValueName);
-		setObject(env, lpValueName, PKG "LPWSTR", "value", SIG_STRING, jValueName);
+		// Save lpValueName:
+		jstring lpValueNameResultString = 
+			env->NewString(
+				(const jchar*)lpValueNameStringBuffer,
+				dwlpcchValueName);
+		setObject(env, lpValueName, "LPWSTR", "value", SIG_STRING, lpValueNameResultString);
 
 		// Save lpcchValueName:
-		setInt(env, lpcchValueName, PKG "LPDWORD", "value", cchValueName);
+		setInt(env, lpcchValueName, "LPDWORD", "value", (jint)dwlpcchValueName);
 
+		// Try save lpType:
 		if (lpType != NULL) {
-			// Save lpType:
-			setInt(env, lpType, PKG "LPDWORD", "value", (jint)lpType);
+			setInt(env, lpType, "LPDWORD", "value", (jint)dwType);
 		}
-		
+
+		// Try save lpData:
 		if (lpData != NULL) {
-			// Save lpData:
-			jbyteArray byteArray = env->NewByteArray((jsize)dwlpcbData);
-			jbyte* arrayData = env->GetByteArrayElements(byteArray, 0);
-			strcpy_s((char*)arrayData, (size_t) dwlpcbData, (char*) data);
-			env->ReleaseByteArrayElements(byteArray, arrayData, 0);
-			free(data);
+			jbyteArray arr = (jbyteArray)getObject(env, lpData, "LPBYTE", "value", SIG_BYTE_ARRAY);
+			jbyte* javaBytes = env->GetByteArrayElements(arr, NULL);
+			jsize sz = env->GetArrayLength(arr);
+			strcpy_s((char*) javaBytes, sz, (const char*) bytes);
+			env->ReleaseByteArrayElements(arr, javaBytes, NULL);
 		}
 
-		// Save lpcbData:
+		// Try save lpcbData:
 		if (lpcbData != NULL) {
-			setInt(env, lpcbData, PKG "LPDWORD", "value", dwlpcbData);
+			setInt(env, lpcbData, "LPDWORD", "value", (jint)dwlpcbData);
 		}
 
+		free(lpValueNameStringBuffer);
 		return ret;
-	}
-
-	JNIEXPORT jint JNICALL
-		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegFlushKey(
-			JNIEnv* env,
-			jobject obj,
-			jint hKey) {
-		return (jint)RegFlushKey((HKEY)hKey);
 	}
 
 #ifdef __cplusplus

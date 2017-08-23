@@ -7,5 +7,5 @@ package net.coderodde.windows.registry;
  * @version 1.6 (Aug 18, 2017)
  */
 public class LPWSTR {
-    String value;
+    public String value;
 }
