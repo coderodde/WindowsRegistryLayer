@@ -179,6 +179,28 @@ public class WindowsRegistryLayer {
                                       PFILETIME lpftLastWriteTime);
     
     /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724911(v=vs.85).aspx">
+     * RegQueryValueEx function</a> 
+     */
+    public native int RegQueryValueEx(int hKey,
+                                      LPWSTR lpValueName,
+                                      LPDWORD lpReserved,
+                                      LPDWORD lpType,
+                                      LPBYTE lpData,
+                                      LPDWORD lpcData);
+    
+    /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724921(v=vs.85).aspx">
+     * RegSetKeyValue function</a> 
+     */
+    public native int RegSetKeyValue(int hKey,
+                                     LPWSTR lpSubKey,
+                                     LPWSTR lpValueName,
+                                     int dwType,
+                                     PVOID lpData,
+                                     int cbData);
+    
+    /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
