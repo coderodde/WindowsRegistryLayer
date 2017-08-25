@@ -788,6 +788,234 @@ extern "C" {
 		return (jint)ret;
 	}
 
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegQueryValueEx(
+						JNIEnv* env,
+						jobject obj,
+			_In_		jint hKey,
+			_In_opt_	jobject lpValueName,
+			_Reserved_	jobject lpReserved,
+			_Out_opt_	jobject lpType,
+			_Out_opt_	jobject lpData,
+			_Inout_opt_ jobject lpcbData) {
+		DWORD dwReserved;
+		DWORD dwType;
+		DWORD dwcbData;
+		LPBYTE dataBuffer = NULL;
+		LPCWSTR valueNameStringBuffer = NULL;
+		jstring javaValueNameString = NULL;
+		jbyteArray javaDataBytes = NULL;
+
+		if (lpcbData != NULL) {
+			dwcbData = getInt(env, lpcbData, PKG "LPDWORD", "value");
+		}
+
+		if (lpValueName != NULL) {
+			javaValueNameString = 
+				(jstring)getObject(
+					env, 
+					lpValueName, 
+					PKG "LPWSTR", 
+					"value", 
+					SIG_STRING);
+			valueNameStringBuffer = (LPCWSTR)env->GetStringChars(javaValueNameString, NULL);
+		}
+
+		if (lpData != NULL) {
+			javaDataBytes = 
+				(jbyteArray)getObject(
+					env, 
+					lpData, 
+					PKG "LPBYTE", 
+					"value", 
+					SIG_BYTE_ARRAY);
+			dataBuffer = (LPBYTE)env->GetByteArrayElements(javaDataBytes, NULL);
+		}
+
+		LONG ret = RegQueryValueEx(
+			(HKEY)hKey,
+			valueNameStringBuffer,
+			(lpReserved ? &dwReserved : NULL),
+			(lpType ? &dwType : NULL),
+			(lpData ? dataBuffer : NULL),
+			(lpcbData ? &dwcbData : NULL));
+
+		free((void*)valueNameStringBuffer);
+
+		if (javaValueNameString != NULL) {
+			env->ReleaseStringChars(
+				javaValueNameString,
+				(const jchar*)valueNameStringBuffer);
+		}
+
+		if (lpData != NULL) {
+			jbyteArray newByteArray = env->NewByteArray(dwcbData);
+			jbyte* newByteArrayElements = env->GetByteArrayElements(newByteArray, NULL);
+			strcpy_s((char*)newByteArrayElements, (size_t)dwcbData, (const char*)dataBuffer);
+			setObject(env, lpData, PKG "LPBYTE", "value", SIG_BYTE_ARRAY, newByteArray);
+		}
+
+		if (lpType != NULL) {
+			setInt(env, lpType, PKG "LPDWORD", "value", (jint)dwType);
+		}
+
+		if (lpcbData != NULL) {
+			setInt(env, lpcbData, PKG "LPDWORD", "value", (jint)dwcbData);
+		}
+		
+		return (jint)ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegSetKeyValue(
+						JNIEnv* env,
+						jobject obj,
+			_In_		jint hKey,
+			_In_opt_	jobject lpSubKey,
+			_In_opt_	jobject lpValueName,
+			_In_		jint dwType,
+			_In_opt_	jobject lpData,
+			_In_		jint cbData) {
+		LPCWSTR lpSubKeyStringBuffer = NULL;
+		LPCWSTR lpValueNameStringBuffer = NULL;
+		LPCVOID data = NULL;
+
+		if (lpSubKey != NULL) {
+			jstring javaSubKeyString = (jstring)getObject(
+				env, 
+				lpSubKey, 
+				PKG "LPWSTR", 
+				"value", 
+				SIG_STRING);
+
+			jsize javaStringLength = env->GetStringLength(javaSubKeyString);
+			const jchar* javaStringChars = env->GetStringChars(javaSubKeyString, NULL);
+			lpSubKeyStringBuffer = (LPCWSTR)calloc(javaStringLength + 1, sizeof(wchar_t));
+
+			wcscpy_s(
+				(wchar_t*)lpSubKeyStringBuffer,
+				javaStringLength,
+				(const wchar_t*)javaStringChars);
+
+			env->ReleaseStringChars(javaSubKeyString, javaStringChars);
+		}
+
+		if (lpValueName != NULL) {
+			jstring javaValueNameString = (jstring)getObject(
+				env,
+				lpValueName,
+				PKG "LPWSTR",
+				"value",
+				SIG_STRING);
+
+			jsize javaStringLength = env->GetStringLength(javaValueNameString);
+			const jchar* javaStringChars = env->GetStringChars(javaValueNameString, NULL);
+			lpValueNameStringBuffer = (LPCWSTR)calloc(javaStringLength + 1, sizeof(wchar_t));
+
+			wcscpy_s(
+				(wchar_t*)lpValueNameStringBuffer,
+				javaStringLength,
+				(const wchar_t*)javaStringChars);
+			
+			env->ReleaseStringChars(javaValueNameString, javaStringChars);
+		}
+
+		if (lpData != NULL) {
+			jbyteArray javaBytes = (jbyteArray)getObject(env, lpData, PKG "PVOID", "value", SIG_BYTE_ARRAY);
+			jsize javaBytesLength = env->GetArrayLength(javaBytes);
+			data = (LPCVOID)calloc(javaBytesLength, sizeof(BYTE));
+			jbyte* rawBytes = env->GetByteArrayElements(javaBytes, NULL);
+			memcpy_s((void*)data, javaBytesLength, rawBytes, javaBytesLength);
+			env->ReleaseByteArrayElements(javaBytes, rawBytes, 0);
+		}
+
+		LONG ret = RegSetKeyValueW(
+			(HKEY)hKey,
+			(LPCWSTR)lpSubKeyStringBuffer,
+			(LPCWSTR)lpValueNameStringBuffer,
+			(DWORD)dwType,
+			data,
+			cbData);
+
+		free((void*)lpSubKeyStringBuffer);
+		free((void*)lpValueNameStringBuffer);
+		free((void*)data);
+
+		return (jint)ret;
+	}
+
+	JNIEXPORT jint JNICALL
+		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegSetValueEx(
+						JNIEnv* env,
+						jobject obj,
+			_In_		jint	hKey,
+			_In_opt_	jobject lpValueName,
+			_Reserved_  jint	Reserved,
+			_In_		jint	dwType,
+			_In_		jobject lpData,
+			_In_		jint	cbData) {
+		LPCWSTR lpValueNameStringBuffer = NULL;
+		LPBYTE data = NULL;
+
+		if (lpValueName != NULL) {
+			jstring valueNameJavaString =
+				(jstring)getObject(
+					env, 
+					lpValueName, 
+					PKG "LPWSTR", 
+					"value", 
+					SIG_STRING);
+
+			jsize valueNameJavaStringLength = env->GetStringLength(valueNameJavaString);
+			lpValueNameStringBuffer = (LPCWSTR)calloc(valueNameJavaStringLength + 1, sizeof(wchar_t));
+			const jchar* valueNameJavaStringChars = env->GetStringChars(valueNameJavaString, NULL);
+			
+			wcscpy_s(
+				(wchar_t*)lpValueNameStringBuffer,
+				valueNameJavaStringLength,
+				(const wchar_t*)valueNameJavaStringChars);
+
+			env->ReleaseStringChars(valueNameJavaString, valueNameJavaStringChars);
+		}
+
+		if (lpData != NULL) {
+			jbyteArray javaDataByteArray = 
+				(jbyteArray)getObject(
+					env, 
+					lpData, 
+					PKG "LPBYTE", 
+					"value", 
+					SIG_BYTE_ARRAY);
+
+			jsize javaDataByteArrayLength = env->GetArrayLength(javaDataByteArray);
+			data = (LPBYTE)calloc(javaDataByteArrayLength, sizeof(BYTE));
+			jbyte* javaDataByteArrayElements = env->GetByteArrayElements(javaDataByteArray, NULL);
+
+			memcpy_s(
+				data,
+				javaDataByteArrayLength, 
+				javaDataByteArrayElements, 
+				javaDataByteArrayLength);	
+		
+			env->ReleaseByteArrayElements(
+				javaDataByteArray,
+				javaDataByteArrayElements, 
+				0);
+		}
+
+		LONG ret = RegSetValueEx(
+			(HKEY)hKey,
+			(LPCWSTR)lpValueNameStringBuffer,
+			(DWORD)Reserved,
+			(DWORD)dwType,
+			(LPBYTE)data,
+			(DWORD)cbData);
+
+		free(data);
+		free((void*)lpValueNameStringBuffer);
+		return (jint)ret;
+	}
+
 #ifdef __cplusplus
 }
 #endif

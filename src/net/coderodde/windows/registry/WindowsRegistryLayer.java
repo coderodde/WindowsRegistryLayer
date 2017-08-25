@@ -201,6 +201,17 @@ public class WindowsRegistryLayer {
                                      int cbData);
     
     /**
+     * @see <a target="_blank" href="https://msdn.microsoft.com/en-us/library/windows/desktop/ms724923(v=vs.85).aspx">
+     * RegSetValueEx function</a> 
+     */
+    public native int RegSetValueEx(int hKey,
+                                    LPWSTR lpValueName,
+                                    int Reserved,
+                                    int dwType,
+                                    LPBYTE lpData,
+                                    int cbData);
+    
+    /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
