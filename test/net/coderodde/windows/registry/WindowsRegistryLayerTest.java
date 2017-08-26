@@ -21,7 +21,7 @@ public class WindowsRegistryLayerTest {
                 wrl.RegCreateKeyEx(HKEY_CURRENT_USER,
                                    TEST_PATH,
                                    0,
-                                   "myClass",
+                                   "class",
                                    REG_OPTION_VOLATILE,
                                    REGSAM.KEY_ALL_ACCESS,
                                    null,

@@ -180,53 +180,73 @@ extern "C" {
 		 jobject phkResult,
 		 jobject lpdwDisposition)
 	{
-		if (lpSubKey == NULL) {
-			return throwNullPointerException(env, "lpSubKey is null.");
+		LPWSTR subKeyStringBuffer = NULL;
+		DWORD dwReserved = (DWORD)reserved;
+		LPWSTR classStringBuffer = NULL;
+		DWORD options = (DWORD)dwOptions;
+		REGSAM sam = (REGSAM)samDesired;
+		HKEY hkResult = 0;
+		DWORD dwDisposition;
+
+		if (lpSubKey != NULL) {
+			const jchar* lpSubKeyJavaChars = env->GetStringChars(lpSubKey, NULL);
+			jsize lpSubKeyJavaCharsLength = env->GetStringLength(lpSubKey);
+			subKeyStringBuffer = (LPWSTR)calloc(lpSubKeyJavaCharsLength + 1, sizeof(wchar_t));
+			wcscpy_s(
+				(wchar_t*)subKeyStringBuffer, 
+				lpSubKeyJavaCharsLength + 1,
+				(const wchar_t*)lpSubKeyJavaChars);
+			env->ReleaseStringChars(lpSubKey, lpSubKeyJavaChars);
 		}
 
-		const jchar* nativeLpSubKey = env->GetStringChars(lpSubKey, 0);
-		const jchar* nativeLpClass = env->GetStringChars(lpClass, 0);
-		jsize nativeLpClassLength = env->GetStringLength(lpClass);
-		jchar* modifiableNativeLpClass = 
-			(jchar*) calloc(nativeLpClassLength + 1, sizeof(jchar));
+		if (lpClass != NULL) {
+			const jchar* lpClassJavaChars = env->GetStringChars(lpClass, NULL);
+			jsize lpClassJavaCharsLength = env->GetStringLength(lpClass);
+			classStringBuffer = (LPWSTR)calloc(lpClassJavaCharsLength + 1, sizeof(wchar_t));
+			wcscpy_s(
+				(wchar_t*)classStringBuffer,
+				lpClassJavaCharsLength + 1,
+				(const wchar_t*)lpClassJavaChars);
+			env->ReleaseStringChars(lpClass, lpClassJavaChars);
+		}
 
-		wcscpy_s((LPWSTR) modifiableNativeLpClass, 
-			      nativeLpClassLength + 1,
-			     (LPCWSTR) nativeLpClass);
+		LONG ret = RegCreateKeyExW(
+			(HKEY)hKey,
+			subKeyStringBuffer,
+			(DWORD)reserved,
+			classStringBuffer,
+			options,
+			sam,
+			NULL, // LPSECURITY_ATTRIBUTES not yet supported.
+			(phkResult ? &hkResult : NULL),
+			(lpdwDisposition ? &dwDisposition : NULL));
 
-		DWORD dwDisposition;
-		HKEY hkResult;
+		if (subKeyStringBuffer != NULL) {
+			free((void*)subKeyStringBuffer);
+		}
 
-		int ret = RegCreateKeyExW(
-			(HKEY) hKey,
-			(LPCWSTR) nativeLpSubKey,
-			0, // Reserved.
-			(LPWSTR) modifiableNativeLpClass,
-			dwOptions,
-			samDesired,
-			NULL,
-			&hkResult,
-			&dwDisposition);
-
-		// Release the strings.
-		env->ReleaseStringChars(lpSubKey, nativeLpSubKey);
-		env->ReleaseStringChars(lpClass, nativeLpClass);
-		free(modifiableNativeLpClass);
+		if (classStringBuffer != NULL) {
+			free((void*)classStringBuffer);
+		}
 
 		// Fill the objects with data.
-		setInt(
-			env,
-			lpdwDisposition,
-			PKG "LPDWORD",
-			"value",
-			(jint)dwDisposition);
+		if (phkResult != NULL) {
+			setInt(
+				env,
+				phkResult,
+				PKG "PHKEY",
+				"value",
+				(jint)hkResult);
+		}
 
-		setInt(
-			env,
-			phkResult,
-			PKG "PHKEY",
-			"value",
-			(jint)hkResult);
+		if (lpdwDisposition != NULL) {
+			setInt(
+				env,
+				lpdwDisposition,
+				PKG "LPDWORD",
+				"value",
+				(jint)dwDisposition);
+		}
 
 		return (jint) ret;
 	}
@@ -549,7 +569,10 @@ extern "C" {
 			setInt(env, lpcbData, PKG "LPDWORD", "value", (jint)dwlpcbData);
 		}
 
-		free(lpValueNameStringBuffer);
+		if (lpValueNameStringBuffer != NULL) {
+			free(lpValueNameStringBuffer);
+		}
+		
 		return ret;
 	}
 
@@ -597,8 +620,13 @@ extern "C" {
 			(pcbData ? &cbData : NULL));
 
 		// Release memory:
-		free((void*)lpSubKeyStringBuffer);
-		free((void*)lpValueStringBuffer);
+		if (lpSubKeyStringBuffer != NULL) {
+			free((void*)lpSubKeyStringBuffer);
+		}
+
+		if (lpValueStringBuffer != NULL) {
+			free((void*)lpValueStringBuffer);
+		}
 
 		// Recover output data:
 		if (pdwType != NULL) {
@@ -722,7 +750,7 @@ extern "C" {
 			lpClassStringBuffer = (LPWSTR)calloc(javaStringLength + 1, sizeof(jchar));
 			wcscpy_s(
 				(wchar_t*)lpClassStringBuffer, 
-				javaStringLength, 
+				javaStringLength + 1, 
 				(const wchar_t*)javaStringChars);
 		}
 
@@ -746,6 +774,7 @@ extern "C" {
 				(const jchar*)lpClassStringBuffer,
 				wcslen(lpClassStringBuffer));
 			setObject(env, lpClass, PKG "LPWSTR", "value", SIG_STRING, newClassJavaString);
+			free((void*)lpClassStringBuffer);
 		}
 
 		if (lpcClass != NULL) {
@@ -840,7 +869,9 @@ extern "C" {
 			(lpData ? dataBuffer : NULL),
 			(lpcbData ? &dwcbData : NULL));
 
-		free((void*)valueNameStringBuffer);
+		if (valueNameStringBuffer != NULL) {
+			free((void*)valueNameStringBuffer);
+		}
 
 		if (javaValueNameString != NULL) {
 			env->ReleaseStringChars(
@@ -894,7 +925,7 @@ extern "C" {
 
 			wcscpy_s(
 				(wchar_t*)lpSubKeyStringBuffer,
-				javaStringLength,
+				javaStringLength + 1,
 				(const wchar_t*)javaStringChars);
 
 			env->ReleaseStringChars(javaSubKeyString, javaStringChars);
@@ -937,17 +968,25 @@ extern "C" {
 			data,
 			cbData);
 
-		free((void*)lpSubKeyStringBuffer);
-		free((void*)lpValueNameStringBuffer);
-		free((void*)data);
+		if (lpSubKeyStringBuffer != NULL) {
+			free((void*)lpSubKeyStringBuffer);
+		}
+
+		if (lpValueNameStringBuffer != NULL) {	
+			free((void*)lpValueNameStringBuffer);
+		}
+
+		if (data != NULL) {
+			free((void*)data);
+		}
 
 		return (jint)ret;
 	}
 
 	JNIEXPORT jint JNICALL
 		Java_net_coderodde_windows_registry_WindowsRegistryLayer_RegSetValueEx(
-						JNIEnv* env,
-						jobject obj,
+			JNIEnv* env,
+			jobject obj,
 			_In_		jint	hKey,
 			_In_opt_	jobject lpValueName,
 			_Reserved_  jint	Reserved,
@@ -960,31 +999,31 @@ extern "C" {
 		if (lpValueName != NULL) {
 			jstring valueNameJavaString =
 				(jstring)getObject(
-					env, 
-					lpValueName, 
-					PKG "LPWSTR", 
-					"value", 
+					env,
+					lpValueName,
+					PKG "LPWSTR",
+					"value",
 					SIG_STRING);
 
 			jsize valueNameJavaStringLength = env->GetStringLength(valueNameJavaString);
 			lpValueNameStringBuffer = (LPCWSTR)calloc(valueNameJavaStringLength + 1, sizeof(wchar_t));
 			const jchar* valueNameJavaStringChars = env->GetStringChars(valueNameJavaString, NULL);
-			
+
 			wcscpy_s(
 				(wchar_t*)lpValueNameStringBuffer,
-				valueNameJavaStringLength,
+				valueNameJavaStringLength + 1,
 				(const wchar_t*)valueNameJavaStringChars);
 
 			env->ReleaseStringChars(valueNameJavaString, valueNameJavaStringChars);
 		}
 
 		if (lpData != NULL) {
-			jbyteArray javaDataByteArray = 
+			jbyteArray javaDataByteArray =
 				(jbyteArray)getObject(
-					env, 
-					lpData, 
-					PKG "LPBYTE", 
-					"value", 
+					env,
+					lpData,
+					PKG "LPBYTE",
+					"value",
 					SIG_BYTE_ARRAY);
 
 			jsize javaDataByteArrayLength = env->GetArrayLength(javaDataByteArray);
@@ -993,13 +1032,13 @@ extern "C" {
 
 			memcpy_s(
 				data,
-				javaDataByteArrayLength, 
-				javaDataByteArrayElements, 
-				javaDataByteArrayLength);	
-		
+				javaDataByteArrayLength,
+				javaDataByteArrayElements,
+				javaDataByteArrayLength);
+
 			env->ReleaseByteArrayElements(
 				javaDataByteArray,
-				javaDataByteArrayElements, 
+				javaDataByteArrayElements,
 				0);
 		}
 
@@ -1011,8 +1050,14 @@ extern "C" {
 			(LPBYTE)data,
 			(DWORD)cbData);
 
-		free(data);
-		free((void*)lpValueNameStringBuffer);
+		if (data != NULL) {
+			free(data);
+		}
+
+		if (lpValueNameStringBuffer != NULL) {
+			free((void*)lpValueNameStringBuffer);
+		}
+
 		return (jint)ret;
 	}
 
